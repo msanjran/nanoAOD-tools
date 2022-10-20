@@ -1,3 +1,5 @@
+# placeholder comment
+
 import os
 import sys
 import math
@@ -42,7 +44,7 @@ print "output directory:", args.output[0]
 if args.maxEvents:
     print 'max number of events', args.maxEvents
 
-s = {
+globalOptions = {
     "isData": args.isData,
     "isSignal": args.isSignal,
     "year": args.year
@@ -111,18 +113,18 @@ def leptonSequence():
             muonID=MuonSelection.TIGHT,
             muonIso=MuonSelection.INV if args.invid else MuonSelection.VERYTIGHT,
         ),
-        SingleMuonTriggerSelection(
-            inputCollection=lambda event: event.tightMuons,
-            outputName="IsoMuTrigger",
-            storeWeights=False,
-        ),
+        #SingleMuonTriggerSelection(
+        #    inputCollection=lambda event: event.tightMuons,
+        #    outputName="IsoMuTrigger",
+        #    storeWeights=False,
+        #),
         
-        MuonVeto(
-            inputCollection=lambda event: event.tightMuons_unselected,
-            outputName = "looseMuons",
-            muonMinPt = 10.,
-            muonMaxEta = 2.4,
-        ),
+        #MuonVeto(
+        #    inputCollection=lambda event: event.tightMuons_unselected,
+        #    outputName = "looseMuons",
+        #    muonMinPt = 10.,
+        #    muonMaxEta = 2.4,
+        #),
 
         ElectronSelection(
             inputCollection = lambda event: Collection(event, "Electron"),
@@ -133,24 +135,24 @@ def leptonSequence():
             storeKinematics=[],
             storeWeights=False,
         ),
-        SingleElectronTriggerSelection(
-            inputCollection=lambda event: event.tightElectrons,
-            outputName="IsoElectronTrigger",
-            storeWeights=False,
-        ),
-        ElectronVeto(
-            inputCollection=lambda event: event.tightElectrons_unselected,
-            outputName = "looseElectrons",
-            electronMinPt = 10.,
-            electronMaxEta = 2.4,
-        ),
-        EventSkim(selection=lambda event: (event.IsoMuTrigger_flag > 0) or (event.IsoElectronTrigger_flag > 0)),
-        EventSkim(selection=lambda event: (len(event.tightMuons) + len(event.tightElectrons)) > 0),
-        EventSkim(selection=lambda event: (len(event.looseMuons) + len(event.looseElectrons)) == 0),
+        #SingleElectronTriggerSelection(
+        #    inputCollection=lambda event: event.tightElectrons,
+        #    outputName="IsoElectronTrigger",
+        #    storeWeights=False,
+        #),
+        #ElectronVeto(
+        #    inputCollection=lambda event: event.tightElectrons_unselected,
+        #    outputName = "looseElectrons",
+        #    electronMinPt = 10.,
+        #    electronMaxEta = 2.4,
+        #),
+        #EventSkim(selection=lambda event: (event.IsoMuTrigger_flag > 0) or (event.IsoElectronTrigger_flag > 0)),
+        #EventSkim(selection=lambda event: (len(event.tightMuons) + len(event.tightElectrons)) > 0),
+        #EventSkim(selection=lambda event: (len(event.looseMuons) + len(event.looseElectrons)) == 0),
         
     ]
     return seq
-    
+ 
 def jetSelection(jetDict):
     seq = []
     
@@ -159,46 +161,39 @@ def jetSelection(jetDict):
             JetSelection(
                 inputCollection=jetCollection,
                 leptonCollectionDRCleaning=lambda event: event.tightMuons+event.tightElectrons,
-                jetMinPt=30.,
+                jetMinPt=25.,
                 jetMaxEta=2.4,
                 dRCleaning=0.4,
                 jetId=JetSelection.LOOSE,
-                storeKinematics=[],
+                storeKinematics=['pt', 'eta', 'phi', 'mass', 'btagDeepFlavB'],
                 outputName="selectedJets_"+systName,
             )
         ])
-        
+
         seq.append(
             BTagSelection(
                 inputCollection=lambda event,sys=systName: getattr(event,"selectedJets_"+sys),
                 flagName="isBTagged",
                 outputName="selectedBJets_"+systName,
-                jetMinPt=30.,
+                jetMinPt=25.,
                 jetMaxEta=2.4,
                 workingpoint = BTagSelection.LOOSE,
                 storeKinematics=[],
                 storeTruthKeys = [],
             )
         )
-        
-        seq.append(
-            TopNNRecoInputs(
-                bjetCollection=lambda event,sys=systName: filter(lambda jet: jet.isBTagged,getattr(event,"selectedJets_"+sys)),
-                jetCollection=lambda event,sys=systName: getattr(event,"selectedJets_"+sys),
-                outputName='topNNReco'
-            )
-        )
+
         
     systNames = jetDict.keys()
    
-    # At least 2 AK4 jets
+    # At least 6 AK4 jets
     seq.append(
         EventSkim(selection=lambda event, systNames=systNames: 
-            any([getattr(event, "nselectedJets_"+systName) >= 2 for systName in systNames])
+            any([getattr(event, "nselectedJets_"+systName) >= 6 for systName in systNames])
         )
     )
-    
-    #at least 2 b-tagged jets
+
+    # at least 2 b-tagged jets
     seq.append(
         EventSkim(selection=lambda event, systNames=systNames: 
             any([len(filter(lambda jet: jet.isBTagged,getattr(event,"selectedJets_"+systName))) >= 2 for systName in systNames])
@@ -215,14 +210,8 @@ def jetSelection(jetDict):
             )
         )
 
-    
-    
-    
-            
     return seq
     
-
-
 analyzerChain = [
     EventSkim(selection=lambda event: event.nTrigObj > 0),
     MetFilter(
@@ -230,7 +219,19 @@ analyzerChain = [
     ),
 ]
 
+def genPartSequence():
+    seq = [
+            GenPartSelection(
+                inputCollection = lambda event: Collection(event, "GenPart"),
+                outputName="selectedGenParts",
+                storeKinematics=['phi', 'eta', 'pdgId'],
+            )
+        ]
+        
+    return seq
+
 analyzerChain.extend(leptonSequence())
+analyzerChain.extend(genPartSequence())
 
 if args.isData:
     analyzerChain.extend(
@@ -318,7 +319,7 @@ if not globalOptions["isData"]:
 p = PostProcessor(
     args.output[0],
     args.inputFiles,
-    cut="(nJet>1)&&((nElectron+nMuon)>1)", #at least 2 jets + 2 leptons
+    cut="(nJet>5)", #at least 2 jets + 2 leptons
     modules=analyzerChain,
     friend=True,
     maxEntries = args.maxEvents

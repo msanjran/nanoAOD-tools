@@ -41,3 +41,5 @@ from TopNNReco import TopNNRecoInputs
 #lhe weights
 from LHEWeightProducer import LHEWeightProducer
 
+#gen particles
+from GenPartSelection import GenPartSelection
