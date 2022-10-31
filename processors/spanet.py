@@ -179,7 +179,7 @@ def jetSelection(jetDict):
                 jetMaxEta=2.4,
                 workingpoint = BTagSelection.LOOSE,
                 storeKinematics=[],
-                storeTruthKeys = [],
+                storeTruthKeys = truthKeys,
             )
         )
 
