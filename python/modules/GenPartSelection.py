@@ -41,9 +41,23 @@ class GenPartSelection(Module):
         # self.out.branch("n"+self.outputName+"t1", "I")
         # self.out.branch("n"+self.outputName+"t2", "I")
 
+        # for ttbar
+        #for variable in self.storeKinematics:
+        #    self.out.branch(self.outputName+"_t1_"+variable, "F", lenVar="n"+self.outputName)
+        #    self.out.branch(self.outputName+"_t2_"+variable, "F", lenVar="n"+self.outputName)
+
+        self.out.branch("n"+self.outputName+"_t1", "I")
+        self.out.branch("n"+self.outputName+"_t2", "I")
+        self.out.branch("n"+self.outputName+"_t3", "I")
+        self.out.branch("n"+self.outputName+"_t4", "I")
+        
+
+        # for four-top
         for variable in self.storeKinematics:
             self.out.branch(self.outputName+"_t1_"+variable, "F", lenVar="n"+self.outputName)
             self.out.branch(self.outputName+"_t2_"+variable, "F", lenVar="n"+self.outputName)
+            self.out.branch(self.outputName+"_t3_"+variable, "F", lenVar="n"+self.outputName)
+            self.out.branch(self.outputName+"_t4_"+variable, "F", lenVar="n"+self.outputName)
     
     def endFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
         pass
@@ -92,33 +106,55 @@ class GenPartSelection(Module):
                     topDict[topIdx]['neutrino'].append(genParticle)
             
         hadronicTops = []
+        leptonicTops = []
             
         for idx in topDict.keys():
             top = topDict[idx]
             if len(top['quarks'])==2 and len(top['lepton'])==0 and len(top['neutrino'])==0 and len(top['bquark'])==1:
                 top['quarks'] = sorted(top['quarks'],key=lambda x: x.pt, reverse=True) #sort by pT like jets
                 hadronicTops.append(top) # appending a dictionary
+            elif len(top['quarks'])==0 and len(top['lepton'])==1 and len(top['neutrino'])==1 and len(top['bquark'])==1:
+                top['quarks'] = sorted(top['quarks'],key=lambda x: x.pt, reverse=True) #sort by pT like jets
+                leptonicTops.append(top) # appending a dictionary
         
-        # should put a test on if the top quarks originate from ttbar
-        return {"hadronic": hadronicTops}
+        # should put a test on whether the top quarks originate from ttbarttbar
+        return {"hadronic": hadronicTops, "leptonic": leptonicTops}
 
     def analyze(self, event):
         """process event, return True (go to next module) or False (fail, go to next event)"""
 
+        # get hadronic and leptonic tops with the signal daughter particles
         genHadronicTops = self.getGenTop(event)["hadronic"]
-        if len(genHadronicTops) != 2:
+        genLeptonicTops = self.getGenTop(event)["leptonic"]
+
+        # make sure this event is the signal
+        if len(genHadronicTops) != 3 and len(genLeptonicTops) != 1:
             return False
 
-        for i, genHadronicTop_i in enumerate(genHadronicTops):
-            genParts_i = [genHadronicTop_i['top'], genHadronicTop_i['bquark'][0], genHadronicTop_i['quarks'][0], genHadronicTop_i['quarks'][1]]
-            i_Name = "_t"+str(i+1)+"_"
-            
+        # in for loop in case we want more leptonic tops
+        # but currently should only loop once
+        for i, genLeptonicTop_i in enumerate(genLeptonicTops): 
+            genLeptonicParts_i = [genLeptonicTop_i['top'], genLeptonicTop_i['bquark'][0], genLeptonicTop_i['lepton'][0], genLeptonicTop_i['neutrino'][0]]
+            i_Name = "_t"+str(i+1)+"_" # t1
+            self.out.fillBranch("n"+self.outputName+"_t"+str(i+1), len(genLeptonicParts_i))
             # fillBranch( branchname, value )
-            for genPart in genParts_i:
+            for genPart in genLeptonicParts_i:
                 for variable in self.storeKinematics:
                     self.out.fillBranch(
                         self.outputName+i_Name+variable,
-                        map(lambda genPart: getattr(genPart, variable), genParts_i)
+                        map(lambda genPart: getattr(genPart, variable), genLeptonicParts_i)
+                    )
+        
+        for i, genHadronicTop_i in enumerate(genHadronicTops):
+            genHadronicParts_i = [genHadronicTop_i['top'], genHadronicTop_i['bquark'][0], genHadronicTop_i['quarks'][0], genHadronicTop_i['quarks'][1]]
+            i_Name = "_t"+str(i+2)+"_" # t2,t3,t4
+            self.out.fillBranch("n"+self.outputName+"_t"+str(i+2), len(genHadronicParts_i))
+            # fillBranch( branchname, value )
+            for genPart in genHadronicParts_i:
+                for variable in self.storeKinematics:
+                    self.out.fillBranch(
+                        self.outputName+i_Name+variable,
+                        map(lambda genPart: getattr(genPart, variable), genHadronicParts_i)
                     )
         
         return True
