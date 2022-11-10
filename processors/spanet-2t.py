@@ -102,17 +102,17 @@ jerAK8SFUncertaintyFiles = {
 
 def leptonSequence():
     seq = [
-        MuonSelection(
-            inputCollection=lambda event: Collection(event, "Muon"),
-            outputName="tightMuons",
-            storeKinematics=[],
-            storeWeights=False,
-            muonMinPt=minMuonPt[args.year],
-            muonMaxEta=2.4,
-            triggerMatch=True,
-            muonID=MuonSelection.TIGHT,
-            muonIso=MuonSelection.INV if args.invid else MuonSelection.VERYTIGHT,
-        ),
+        #MuonSelection(
+        #    inputCollection=lambda event: Collection(event, "Muon"),
+        #    outputName="tightMuons",
+        #    storeKinematics=[],
+        #    storeWeights=False,
+        #    muonMinPt=minMuonPt[args.year],
+        #    muonMaxEta=2.4,
+        #    triggerMatch=True,
+        #    muonID=MuonSelection.TIGHT,
+        #    muonIso=MuonSelection.INV if args.invid else MuonSelection.VERYTIGHT,
+        #),
         #SingleMuonTriggerSelection(
         #    inputCollection=lambda event: event.tightMuons,
         #    outputName="IsoMuTrigger",
@@ -126,15 +126,15 @@ def leptonSequence():
         #    muonMaxEta = 2.4,
         #),
 
-        ElectronSelection(
-            inputCollection = lambda event: Collection(event, "Electron"),
-            outputName = "tightElectrons",
-            electronID = ElectronSelection.INV if args.invid else ElectronSelection.WP90,
-            electronMinPt = minElectronPt[args.year],
-            electronMaxEta = 2.4,
-            storeKinematics=[],
-            storeWeights=True,
-        ),
+        #ElectronSelection(
+        #    inputCollection = lambda event: Collection(event, "Electron"),
+        #    outputName = "tightElectrons",
+        #    electronID = ElectronSelection.INV if args.invid else ElectronSelection.WP90,
+        #    electronMinPt = minElectronPt[args.year],
+        #    electronMaxEta = 2.4,
+        #    storeKinematics=[],
+        #    storeWeights=True,
+        #),
         #SingleElectronTriggerSelection(
         #    inputCollection=lambda event: event.tightElectrons,
         #    outputName="IsoElectronTrigger",
@@ -146,9 +146,9 @@ def leptonSequence():
         #    electronMinPt = 10.,
         #    electronMaxEta = 2.4,
         #),
-        #EventSkim(selection=lambda event: (event.IsoMuTrigger_flag > 0) or (event.IsoElectronTrigger_flag > 0)),
-        #EventSkim(selection=lambda event: (len(event.tightMuons) + len(event.tightElectrons)) > 0),
-        #EventSkim(selection=lambda event: (len(event.looseMuons) + len(event.looseElectrons)) == 0),
+        EventSkim(selection=lambda event: (event.IsoMuTrigger_flag == 0) and (event.IsoElectronTrigger_flag == 0)),
+        EventSkim(selection=lambda event: (len(event.tightMuons) + len(event.tightElectrons)) == 0),
+        EventSkim(selection=lambda event: (len(event.looseMuons) + len(event.looseElectrons)) == 0),
         
     ]
     return seq
@@ -162,7 +162,7 @@ def jetSelection(jetDict):
                 inputCollection=jetCollection,
                 leptonCollectionDRCleaning=lambda event: event.tightMuons+event.tightElectrons,
                 jetMinPt=25.,
-                jetMaxEta=2.4,
+                jetMaxEta=2.5,
                 dRCleaning=0.4,
                 jetId=JetSelection.LOOSE,
                 storeKinematics=['pt', 'eta', 'phi', 'mass', 'btagDeepFlavB'],
@@ -176,9 +176,9 @@ def jetSelection(jetDict):
                 flagName="isBTagged",
                 outputName="selectedBJets_"+systName,
                 jetMinPt=25.,
-                jetMaxEta=2.4,
+                jetMaxEta=2.5,
                 workingpoint = BTagSelection.LOOSE,
-                storeKinematics=[],
+                storeKinematics=['pt', 'eta', 'phi', 'mass'],
                 storeTruthKeys = [],
             )
         )
