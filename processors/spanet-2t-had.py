@@ -102,50 +102,50 @@ jerAK8SFUncertaintyFiles = {
 
 def leptonSequence():
     seq = [
-        #MuonSelection(
-        #    inputCollection=lambda event: Collection(event, "Muon"),
-        #    outputName="tightMuons",
-        #    storeKinematics=[],
-        #    storeWeights=False,
-        #    muonMinPt=minMuonPt[args.year],
-        #    muonMaxEta=2.4,
-        #    triggerMatch=True,
-        #    muonID=MuonSelection.TIGHT,
-        #    muonIso=MuonSelection.INV if args.invid else MuonSelection.VERYTIGHT,
-        #),
-        #SingleMuonTriggerSelection(
-        #    inputCollection=lambda event: event.tightMuons,
-        #    outputName="IsoMuTrigger",
-        #    storeWeights=False,
-        #),
+        MuonSelection(
+            inputCollection=lambda event: Collection(event, "Muon"),
+            outputName="tightMuons",
+            storeKinematics=[],
+            storeWeights=False,
+            muonMinPt=minMuonPt[args.year],
+            muonMaxEta=2.4,
+            triggerMatch=True,
+            muonID=MuonSelection.TIGHT,
+            muonIso=MuonSelection.INV if args.invid else MuonSelection.VERYTIGHT,
+        ),
+        SingleMuonTriggerSelection(
+            inputCollection=lambda event: event.tightMuons,
+            outputName="IsoMuTrigger",
+            storeWeights=False,
+        ),
         
-        #MuonVeto(
-        #    inputCollection=lambda event: event.tightMuons_unselected,
-        #    outputName = "looseMuons",
-        #    muonMinPt = 10.,
-        #    muonMaxEta = 2.4,
-        #),
+        MuonVeto(
+            inputCollection=lambda event: event.tightMuons_unselected,
+            outputName = "looseMuons",
+            muonMinPt = 10.,
+            muonMaxEta = 2.4,
+        ),
 
-        #ElectronSelection(
-        #    inputCollection = lambda event: Collection(event, "Electron"),
-        #    outputName = "tightElectrons",
-        #    electronID = ElectronSelection.INV if args.invid else ElectronSelection.WP90,
-        #    electronMinPt = minElectronPt[args.year],
-        #    electronMaxEta = 2.4,
-        #    storeKinematics=[],
-        #    storeWeights=True,
-        #),
-        #SingleElectronTriggerSelection(
-        #    inputCollection=lambda event: event.tightElectrons,
-        #    outputName="IsoElectronTrigger",
-        #    storeWeights=True,
-        #),
-        #ElectronVeto(
-        #    inputCollection=lambda event: event.tightElectrons_unselected,
-        #    outputName = "looseElectrons",
-        #    electronMinPt = 10.,
-        #    electronMaxEta = 2.4,
-        #),
+        ElectronSelection(
+            inputCollection = lambda event: Collection(event, "Electron"),
+            outputName = "tightElectrons",
+            electronID = ElectronSelection.INV if args.invid else ElectronSelection.WP90,
+            electronMinPt = minElectronPt[args.year],
+            electronMaxEta = 2.4,
+            storeKinematics=[],
+            storeWeights=True,
+        ),
+        SingleElectronTriggerSelection(
+            inputCollection=lambda event: event.tightElectrons,
+            outputName="IsoElectronTrigger",
+            storeWeights=True,
+        ),
+        ElectronVeto(
+            inputCollection=lambda event: event.tightElectrons_unselected,
+            outputName = "looseElectrons",
+            electronMinPt = 10.,
+            electronMaxEta = 2.4,
+        ),
         EventSkim(selection=lambda event: (event.IsoMuTrigger_flag == 0) and (event.IsoElectronTrigger_flag == 0)),
         EventSkim(selection=lambda event: (len(event.tightMuons) + len(event.tightElectrons)) == 0),
         EventSkim(selection=lambda event: (len(event.looseMuons) + len(event.looseElectrons)) == 0),
