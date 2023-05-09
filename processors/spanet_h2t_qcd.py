@@ -252,7 +252,7 @@ def genPartSequence():
     return seq
 
 analyzerChain.extend(leptonSequence())
-analyzerChain.extend(genPartSequence())
+#analyzerChain.extend(genPartSequence())
 
 if args.isData:
     analyzerChain.extend(
@@ -339,10 +339,6 @@ storeVariables = [
     [lambda tree: tree.branch("fixedGridRhoFastjetAll", "F"), lambda tree,
      event: tree.fillBranch("fixedGridRhoFastjetAll",
                             event.fixedGridRhoFastjetAll)],
-    [lambda tree: tree.branch("event", "L"), lambda tree, 
-     event: tree.fillBranch("event", event.event)],
-    [lambda tree: tree.branch("luminosityBlock", "I"), lambda tree,
-     event: tree.fillBranch("luminosityBlock", event.luminosityBlock)],
 ]
 
 

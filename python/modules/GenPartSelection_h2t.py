@@ -51,14 +51,16 @@ class GenPartSelection_h2t(Module):
         self.out.branch("GenPart_pdgId", "I", lenVar="nGenPart")
         self.out.branch("GenPart_genPartIdxMother", "I", lenVar="nGenPart")
         self.out.branch("GenPart_statusFlags", "I", lenVar="nGenPart")
+        self.out.branch("GenPart_phi", "F", lenVar="nGenPart")
+        self.out.branch("GenPart_eta", "F", lenVar="nGenPart")
         #self.out.branch("n"+self.outputName+"_t3", "I")
         #self.out.branch("n"+self.outputName+"_t4", "I")
         
 
         # for four-top
         for variable in self.storeKinematics:
-            self.out.branch(self.outputName+"_t1_"+variable, "F", lenVar="n"+self.outputName)
-            self.out.branch(self.outputName+"_t2_"+variable, "F", lenVar="n"+self.outputName)
+            self.out.branch(self.outputName+"_t1_"+variable, "F", lenVar="n"+self.outputName+"_t1")
+            self.out.branch(self.outputName+"_t2_"+variable, "F", lenVar="n"+self.outputName+"_t2")
             #self.out.branch(self.outputName+"_t3_"+variable, "F", lenVar="n"+self.outputName)
             #self.out.branch(self.outputName+"_t4_"+variable, "F", lenVar="n"+self.outputName)
     
@@ -131,6 +133,8 @@ class GenPartSelection_h2t(Module):
         self.out.fillBranch("GenPart_pdgId", map(lambda genPart: getattr(genPart, "pdgId"), genParticles ))
         self.out.fillBranch("GenPart_genPartIdxMother", map(lambda genPart: getattr(genPart, "genPartIdxMother"), genParticles ))
         self.out.fillBranch("GenPart_statusFlags", map(lambda genPart: getattr(genPart, "statusFlags"), genParticles ))
+        self.out.fillBranch("GenPart_phi", map(lambda genPart: getattr(genPart, "phi"), genParticles ))
+        self.out.fillBranch("GenPart_eta", map(lambda genPart: getattr(genPart, "eta"), genParticles ))
 
     def analyze(self, event):
         """process event, return True (go to next module) or False (fail, go to next event)"""
@@ -144,9 +148,10 @@ class GenPartSelection_h2t(Module):
         # make sure this event is the signal
         #if len(genHadronicTops) != 3 and len(genLeptonicTops) != 1:
         #    return False
-        if len(genHadronicTops) != 2:
-            self.out.fillBranch(self.outputName+"_isH2t", len(genHadronicTops))
-            return True
+        #if len(genHadronicTops) != 2:
+        #    self.out.fillBranch(self.outputName+"_isH2t", len(genHadronicTops))
+            #print "ouch"
+        #    return True
         #if len(genHadronicTops) != 1 and len(genLeptonicTops) != 1:
         #    return False
 
@@ -165,17 +170,41 @@ class GenPartSelection_h2t(Module):
         #             )
         
         self.out.fillBranch(self.outputName+"_isH2t", len(genHadronicTops))
+        
+        null_list = [0.]
+
+        if len(genHadronicTops) == 0:
+            
+            for i in range(2):
+                self.out.fillBranch("n"+self.outputName+"_t"+str(i+1), 0)
+                i_Name = "_t"+str(i+1)+"_"
+                for variable in self.storeKinematics:
+                    self.out.fillBranch(self.outputName+i_Name+variable, null_list)
+            return True
 
         for i, genHadronicTop_i in enumerate(genHadronicTops):
             genHadronicParts_i = [genHadronicTop_i['top'], genHadronicTop_i['bquark'][0], genHadronicTop_i['quarks'][0], genHadronicTop_i['quarks'][1]]
             i_Name = "_t"+str(i+1)+"_" # t1, t2
             self.out.fillBranch("n"+self.outputName+"_t"+str(i+1), len(genHadronicParts_i))
             # fillBranch( branchname, value )
-            for genPart in genHadronicParts_i:
-                for variable in self.storeKinematics:
-                    self.out.fillBranch(
-                        self.outputName+i_Name+variable,
-                        map(lambda genPart: getattr(genPart, variable), genHadronicParts_i)
-                    )
+            #for genPart in genHadronicParts_i:
+            #    for variable in self.storeKinematics:
+            #        self.out.fillBranch(
+            #            self.outputName+i_Name+variable,
+            #            map(lambda genPart: getattr(genPart, variable), genHadronicParts_i)
+            #        )
+            for variable in self.storeKinematics:
+                self.out.fillBranch(
+                    self.outputName+i_Name+variable,
+                    map(lambda genPart: getattr(genPart, variable), genHadronicParts_i)
+                )
+        if len(genHadronicTops) == 1:
+            i = 1
+            self.out.fillBranch("n"+self.outputName+"_t"+str(i+1), 1)
+            i_Name = "_t"+str(i+1)+"_"
+            
+            for variable in self.storeKinematics:
+                self.out.fillBranch(self.outputName+i_Name+variable, null_list)
+            return True
         
         return True
