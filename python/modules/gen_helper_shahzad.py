@@ -1,7 +1,7 @@
-import numpy
+import numpy as np
 from gen_helper import *
 
-def findTopIdx(p):
+def findTopIdx(p, genParticles):
     ''' find first top quark in a particle's mother decay chain '''
     motherIdx = p.genPartIdxMother
     while (motherIdx>=0):
@@ -12,7 +12,7 @@ def findTopIdx(p):
     
     # end of findTopIdx() function --------------------
     
-def checkMother(p, pdg):
+def checkMother(p, pdg, genParticles):
     ''' check mother particle above p is abs(pdgId) == abs(pdg) or not '''
     mother_idx = p.genPartIdxMother
     mother_pdg = genParticles[mother_idx].pdgId
@@ -39,7 +39,7 @@ def countTops(genParticles):
     # loops through all particles
     lepTops = 0
     hadTops = 0
-    # topDict = {} # dict for debugging purposes
+    # topDict = {} # dict for debugging purposes
     
     for genParticle in genParticles:
         # if lepton or quark
@@ -73,7 +73,7 @@ def countTops(genParticles):
                     hadTops += 1
                 
             # could print for all, but printing for > 4 to exemplify the problem in less verbose output
-            # debugging purposes
+            # debugging purposes
 #            if lepTops + hadTops != 4:
 #                print("method 1 limitation, (lep tops, had tops)", lepTops, hadTops)
 #                for key in topDict:
@@ -100,7 +100,7 @@ def findLastCopy(p, pdg, depth, genParticles):
     # 2. if not then last copy
     # 3. if there are, then check pdg id and hard process
     # 4. if 0, last copy
-    # 5. if 1, repeat function for that one with that p._index
+    # 5. if 1, repeat function for that one with that p._index
     # 6. if > 1, repeat function for all of the potential daughters and choose one with maximum depth or if last copy flag
     any_daughters = np.where(remaining_mother_list_np == p._index)[0]
     
@@ -112,11 +112,11 @@ def findLastCopy(p, pdg, depth, genParticles):
     any_daughters_list = remaining_index_list_np[any_daughters][any_daughters_pdg]
     any_daughters_list_hardprocess = [ fromHardProcess( genParticles[p_idx] ) for p_idx in any_daughters_list ]
     
-    # if no requirements met, it is the last copy
+    # if no requirements met, it is the last copy
     if sum(any_daughters_list_hardprocess) == 0:
         return p, depth, isLastCopy_flag
     
-    # if one meets requirement --> recursively check if this is the last copy
+    # if one meets requirement --> recursively check if this is the last copy
     elif sum(any_daughters_list_hardprocess) == 1:
         any_daughters_idx = int( any_daughters_list[any_daughters_list_hardprocess] )
         return findLastCopy( genParticles[any_daughters_idx], pdg, depth + 1, genParticles)
@@ -136,13 +136,13 @@ def findLastCopy(p, pdg, depth, genParticles):
             daughter_finalCopy_depth.append(finalCopy_depth)
             daughter_finalCopy_isLastCopy.append(finalCopy_isLastCopy)
             
-        # check if any branched daughters are isLastCopy flagged
+        # check if any branched daughters are isLastCopy flagged
         daughter_isLastCopy = np.where( np.array(daughter_finalCopy_isLastCopy) == True )
         if len(daughter_isLastCopy[0]) == 1:
             daughter_finalCopy = daughter_finalCopy_idx[int(daughter_isLastCopy[0])]
             daughter_depth = daughter_finalCopy_depth[int(daughter_isLastCopy[0])]
             daughter_isLastCopy_flag = True
-            return genParticles[daughter_finalCopy], daughter_depth, daughter_isLastCopy_flag, genParticles
+            return genParticles[daughter_finalCopy], daughter_depth, daughter_isLastCopy_flag
 
         # shouldn't really be possible but would choose first one
         elif len(daughter_isLastCopy[0]) > 1:
@@ -150,9 +150,9 @@ def findLastCopy(p, pdg, depth, genParticles):
             daughter_finalCopy = daughter_finalCopy_idx[int(daughter_isLastCopy[0][0])]
             daughter_depth = daughter_finalCopy_depth[int(daughter_isLastCopy[0][0])]
             daughter_isLastCopy_flag = True
-            return genParticles[daughter_finalCopy], daughter_depth, daughter_isLastCopy_flag, genParticles
+            return genParticles[daughter_finalCopy], daughter_depth, daughter_isLastCopy_flag
             
-        # if none isLastCopy flagged --> move onto 'deepest' one in the chain
+        # if none isLastCopy flagged --> move onto 'deepest' one in the chain
         else:
             daughter_max = np.where( np.array(daughter_finalCopy_depth) == np.array(daughter_finalCopy_depth).max() )
 
@@ -160,13 +160,13 @@ def findLastCopy(p, pdg, depth, genParticles):
             if len(daughter_max[0]) == 1:
                 daughter_finalCopy = daughter_finalCopy_idx[int( daughter_max[0] )]
                 daughter_depth = daughter_finalCopy_depth[int( daughter_max[0] )]
-                return genParticles[daughter_finalCopy], daughter_depth, daughter_isLastCopy_flag, genParticles
+                return genParticles[daughter_finalCopy], daughter_depth, daughter_isLastCopy_flag
 
             # if more than one, ffs, choose first one
             else:
                 daughter_finalCopy = daughter_finalCopy_idx[int( daughter_max[0][0] )]
                 daughter_depth = daughter_finalCopy_depth[int( daughter_max[0][0] )]
-                return genParticles[daughter_finalCopy], daughter_depth, daughter_isLastCopy_flag, genParticles
+                return genParticles[daughter_finalCopy], daughter_depth, daughter_isLastCopy_flag
                 
             # can't really have len(0) here ...
             

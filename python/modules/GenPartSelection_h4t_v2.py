@@ -78,29 +78,29 @@ class GenPartSelection_h4t_v2(Module):
         # maybe turn the isFirstCopy into a separate gen filter?
         for genParticle in genParticles:
             if abs(genParticle.pdgId)==5 and isFirstCopy(genParticle) and fromHardProcess(genParticle):
-                topIdx = findTopIdx(genParticle)
-                check_mother = checkMother(genParticle, 6)
+                topIdx = findTopIdx(genParticle, genParticles)
+                check_mother = checkMother(genParticle, 6, genParticles)
                 if topIdx>=0 and topIdx in topDict.keys() and check_mother == True:
                     finalCopy, finalCopyDepth, finalCopyIsLastCopy = findLastCopy(genParticle, genParticle.pdgId, 0, genParticles)
                     topDict[topIdx]['bquark'].append(finalCopy)
                     
             elif abs(genParticle.pdgId)<6 and abs(genParticle.pdgId)>0 and isFirstCopy(genParticle) and fromHardProcess(genParticle):
-                topIdx = findTopIdx(genParticle)
-                check_mother = checkMother(genParticle, 24)
+                topIdx = findTopIdx(genParticle, genParticles)
+                check_mother = checkMother(genParticle, 24, genParticles)
                 if topIdx>=0 and topIdx in topDict.keys() and check_mother == True:
                     finalCopy, finalCopyDepth, finalCopyIsLastCopy = findLastCopy(genParticle, genParticle.pdgId, 0, genParticles)
                     topDict[topIdx]['quarks'].append(finalCopy)
 
             elif abs(genParticle.pdgId) in [11,13,15] and fromHardProcess(genParticle) and isFirstCopy(genParticle):
-                topIdx = findTopIdx(genParticle)
-                check_mother = checkMother(genParticle, 24)
+                topIdx = findTopIdx(genParticle, genParticles)
+                check_mother = checkMother(genParticle, 24, genParticles)
                 if topIdx>=0 and topIdx in topDict.keys() and check_mother == True:
                     finalCopy, finalCopyDepth, finalCopyIsLastCopy = findLastCopy(genParticle, genParticle.pdgId, 0, genParticles)
                     topDict[topIdx]['lepton'].append(finalCopy)
                     
             elif abs(genParticle.pdgId) in [12,14,16] and fromHardProcess(genParticle) and isFirstCopy(genParticle):
-                topIdx = findTopIdx(genParticle)
-                check_mother = checkMother(genParticle, 24)
+                topIdx = findTopIdx(genParticle, genParticles)
+                check_mother = checkMother(genParticle, 24, genParticles)
                 if topIdx>=0 and topIdx in topDict.keys() and check_mother == True:
                     finalCopy, finalCopyDepth, finalCopyIsLastCopy = findLastCopy(genParticle, genParticle.pdgId, 0, genParticles)
                     topDict[topIdx]['neutrino'].append(finalCopy)
