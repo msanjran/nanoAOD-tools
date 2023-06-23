@@ -29,6 +29,8 @@ parser.add_argument('--year', dest='year',
 parser.add_argument('-i','--input', dest='inputFiles', action='append', default=[])
 parser.add_argument('--maxEvents', dest='maxEvents', type=int, default=None)
 parser.add_argument('output', nargs=1)
+#parser.add_argument('--btagWP', dest='btagWP',
+#                    action='store', type=str, default='tight', choices=['tight','medium','loose'])
 
 args = parser.parse_args()
 
@@ -39,6 +41,8 @@ print "invert lepton id/iso:",args.invid
 print "inputs:",len(args.inputFiles)
 print "year:", args.year
 print "output directory:", args.output[0]
+#print "btagging WP:", args.btagWP
+
 if args.maxEvents:
     print 'max number of events', args.maxEvents
 
@@ -155,6 +159,14 @@ def jetSelection(jetDict):
     seq = []
     
     for systName,(jetCollection) in jetDict.items():
+        if isMC:
+	        jetkinematics = ['pt', 'eta', 'phi', 'mass','btagDeepFlavB', 'btagDeepFlavCvB', 'btagDeepFlavCvL', 'hadronFlavour','partonFlavour']
+            #jetkinematics = ['pt', 'eta', 'phi', 'mass','btagDeepFlavB', 'hadronFlavour','partonFlavour']    
+        else:
+            jetkinematics = ['pt', 'eta', 'phi', 'mass','btagDeepFlavB', 'btagDeepFlavCvB', 'btagDeepFlavCvL'] 
+            #jetkinematics = ['pt', 'eta', 'phi', 'mass','btagDeepFlavB']
+
+    for systName,(jetCollection) in jetDict.items():
         seq.extend([
             JetSelection(
                 inputCollection=jetCollection,
@@ -163,15 +175,10 @@ def jetSelection(jetDict):
                 jetMaxEta=2.4, # 2.4. is max range of tracker
                 dRCleaning=0.4,
                 jetId=JetSelection.TIGHT,
-                storeKinematics=['pt', 'eta', 'phi', 'mass','btagDeepFlavB'],
+                storeKinematics=jetkinematics,
                 outputName="selectedJets_"+systName,
             )
         ])
-        
-        if isMC:
-	        truthKeys = ['hadronFlavour','partonFlavour']
-        else:
-            truthKeys = [] 
 
         seq.append(
             BTagSelection(
@@ -181,26 +188,26 @@ def jetSelection(jetDict):
                 jetMinPt=30.,
                 jetMaxEta=2.4,
                 workingpoint = BTagSelection.TIGHT,
-                storeKinematics=["pt", "eta", "phi","mass"],
-                storeTruthKeys = truthKeys,
+                storeKinematics=jetkinematics,
+                storeTruthKeys = [],
             )
         )
         
     systNames = jetDict.keys()
    
     # At least 6 AK4 jets
-    seq.append(
-        EventSkim(selection=lambda event, systNames=systNames: 
-            any([getattr(event, "nselectedJets_"+systName) >= 6 for systName in systNames])
-        )
-    )
+    #seq.append(
+    #    EventSkim(selection=lambda event, systNames=systNames: 
+    #        any([getattr(event, "nselectedJets_"+systName) >= 12 for systName in systNames])
+    #    )
+    #)
     
     #at least 2 b-tagged jets
-    seq.append(
-        EventSkim(selection=lambda event, systNames=systNames: 
-            any([len(filter(lambda jet: jet.isBTagged,getattr(event,"selectedJets_"+systName))) >= 2 for systName in systNames])
-        )
-    )
+    #seq.append(
+    #    EventSkim(selection=lambda event, systNames=systNames: 
+    #        any([len(filter(lambda jet: jet.isBTagged,getattr(event,"selectedJets_"+systName))) >= 4 for systName in systNames])
+    #    )
+    #)
     '''
     #at least 2 AK8 jets
     seq.append(
@@ -235,7 +242,7 @@ analyzerChain = [
 
 def genPartSequence():
     seq = [
-            GenPartSelection_h2t(
+            GenPartSelection_h4t(
                 inputCollection = lambda event: Collection(event, "GenPart"),
                 outputName="selectedGenParts",
                 storeKinematics=['phi', 'eta', 'pdgId'],
@@ -245,7 +252,7 @@ def genPartSequence():
     return seq
 
 analyzerChain.extend(leptonSequence())
-# analyzerChain.extend(genPartSequence())
+analyzerChain.extend(genPartSequence())
 
 if args.isData:
     analyzerChain.extend(
@@ -286,7 +293,7 @@ else:
             propagateJER = False, #not recommended
             outputJetPrefix = 'jets_',
             outputMetPrefix = 'met_',
-            jetKeys=['jetId', 'nConstituents','btagDeepFlavB','hadronFlavour','partonFlavour'],
+            jetKeys=['jetId', 'nConstituents','btagDeepFlavB','hadronFlavour','partonFlavour', 'btagDeepFlavCvB', 'btagDeepFlavCvL'],
         ),
     ])
 
@@ -332,6 +339,10 @@ storeVariables = [
     [lambda tree: tree.branch("fixedGridRhoFastjetAll", "F"), lambda tree,
      event: tree.fillBranch("fixedGridRhoFastjetAll",
                             event.fixedGridRhoFastjetAll)],
+    [lambda tree: tree.branch("event", "L"), lambda tree, 
+     event: tree.fillBranch("event", event.event)],
+    [lambda tree: tree.branch("luminosityBlock", "I"), lambda tree,
+     event: tree.fillBranch("luminosityBlock", event.luminosityBlock)],
 ]
 
 
@@ -357,7 +368,7 @@ if not globalOptions["isData"]:
 p = PostProcessor(
     args.output[0],
     args.inputFiles,
-    cut="(nJet>5)", #at least 6 jets
+    cut="", #at least 6 jets
     modules=analyzerChain,
     friend=True,
     maxEntries = args.maxEvents

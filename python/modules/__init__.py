@@ -44,3 +44,9 @@ from LHEWeightProducer import LHEWeightProducer
 #gen particles
 from GenPartSelection import GenPartSelection
 from GenPartSelection_h2t import GenPartSelection_h2t
+from GenPartSelection_h3t import GenPartSelection_h3t
+from GenPartSelection_h4t import GenPartSelection_h4t
+from GenParticleModuleGabriele import GenParticleModule
+from GenPartSelection_h4t_v2 import GenPartSelection_h4t_v2
+from GenParticleModuleGabriele_v2 import GenParticleModule_v2
+from GenLeptonicTopFinder import GenLeptonicTopFinder
