@@ -42,7 +42,7 @@ print "output directory:", args.output[0]
 if args.maxEvents:
     print 'max number of events', args.maxEvents
 
-globalOptions = {
+s = {
     "isData": args.isData,
     "isSignal": args.isSignal,
     "year": args.year
