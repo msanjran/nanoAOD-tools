@@ -25,7 +25,7 @@ def checkMother(p, pdg, genParticles):
 
     # check if the something else is pdg we want (e.g., 24 for W boson)
     # limitation in dealing with absolute values
-    if abs(mother_pdg) == abs(pdg):
+    if mother_pdg == pdg:
         return True
     else:
         return False
