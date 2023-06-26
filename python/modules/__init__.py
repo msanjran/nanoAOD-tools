@@ -49,4 +49,4 @@ from GenPartSelection_h4t import GenPartSelection_h4t
 from GenParticleModuleGabriele import GenParticleModule
 from GenPartSelection_h4t_v2 import GenPartSelection_h4t_v2
 from GenParticleModuleGabriele_v2 import GenParticleModule_v2
-from GenLeptonicTopFinder import GenLeptonicTopFinder
+from GenTopFinder import GenTopFinder

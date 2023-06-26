@@ -24,6 +24,7 @@ parser.add_argument('--nosys', dest='nosys',
                     action='store_true', default=False)
 parser.add_argument('--invid', dest='invid',
                     action='store_true', default=False)
+parser.add_argument('--skim_tops', dest='skim_tops', choices=['all', 'H4t', 'notH4t'], default='all')
 parser.add_argument('--year', dest='year',
                     action='store', type=str, default='2017', choices=['2016','2016preVFP','2017','2018'])
 parser.add_argument('-i','--input', dest='inputFiles', action='append', default=[])
@@ -38,6 +39,7 @@ print "isData:",args.isData
 print "isSignal:",args.isSignal
 print "evaluate systematics:",not args.nosys
 print "invert lepton id/iso:",args.invid
+print "skim tops", args.skim_tops
 print "inputs:",len(args.inputFiles)
 print "year:", args.year
 print "output directory:", args.output[0]
@@ -251,10 +253,17 @@ def genPartSequence():
         
     return seq
 
-def leptonicTopCountSequence():
-    seq = [ GenLeptonicTopFinder( inputCollection = lambda event: Collection(event, "GenPart"), outputName="selectedGenLeptonicTops")]
+def topCountSequence():
+    seq = [ GenTopFinder( inputCollection = lambda event: Collection(event, "GenPart"), outputName="selectedGenTops") ]
+    
+    if args.skim_tops == 'H4t':
+        seq.append(EventSkim(selection=lambda event: getattr(event, "selectedGenTops_nHadronicTops") == 4))
+    elif args.skim_tops == 'notH4t':
+        seq.append(EventSkim(selection=lambda event: getattr(event, "selectedGenTops_nHadronicTops") != 4))
+    
     return seq
-analyzerChain.extend(leptonicTopCountSequence())
+
+analyzerChain.extend(topCountSequence()) # save events with all-hadronic
 analyzerChain.extend(leptonSequence())
 analyzerChain.extend(genPartSequence())
 

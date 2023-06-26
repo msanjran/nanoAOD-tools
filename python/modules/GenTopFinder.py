@@ -14,11 +14,11 @@ from PhysicsTools.NanoAODTools.postprocessing.framework.eventloop import Module
 from gen_helper import isHardProcess, isLastCopy, isPrompt, fromHardProcess, isFirstCopy
 from gen_helper_shahzad import countTops
 
-class GenLeptonicTopFinder(Module):
+class GenTopFinder(Module):
 
     def __init__(self,
                  inputCollection=lambda event: Collection(event, "GenPart"),
-                 outputName="selectedGenLeptonicTops",
+                 outputName="selectedGenTops",
                  ):
         self.inputCollection = inputCollection
         self.outputName = outputName
@@ -147,6 +147,6 @@ class GenLeptonicTopFinder(Module):
         nLeptonicTops, nHadronicTops = countTops(genParticles)
 
         self.out.fillBranch(self.outputName + "_nLeptonicTops", nLeptonicTops) # n leptonic tops
-        self.out.fillBranch(self.outputName + "_nHadronicTops", nHadronicTops) # n leptonic tops
+        self.out.fillBranch(self.outputName + "_nHadronicTops", nHadronicTops) # n hadronic tops
 
         return True
