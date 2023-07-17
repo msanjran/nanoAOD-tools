@@ -9,6 +9,7 @@ from PhysicsTools.NanoAODTools.postprocessing.framework.datamodel import Collect
 from PhysicsTools.NanoAODTools.postprocessing.framework.eventloop import Module
 
 from utils import deltaR, deltaPhi
+from collections import OrderedDict
 
 
 class BTagSelection(Module):
@@ -19,41 +20,25 @@ class BTagSelection(Module):
     
     def __init__(
         self,
+        btaggingWP = {},
         inputCollection=lambda event: Collection(event, "Jet"),
         flagName = "isBTagged",
-        outputName="btaggedJets",
+        outputName_list=[], #"btaggedJets",
         jetMinPt=30.,
         jetMaxEta=2.4,
-        workingpoint = TIGHT,
+        workingpoint = [],
         storeKinematics=['pt', 'eta'],
         storeTruthKeys=[]
     ):
-
+        self.btaggingWP = btaggingWP
         self.inputCollection = inputCollection
-        self.flagName = flagName
-        self.outputName = outputName
+        #self.flagName = flagName
+        self.outputName_list = outputName_list
         self.jetMinPt = jetMinPt
         self.jetMaxEta = jetMaxEta
         self.storeKinematics = storeKinematics
         self.storeTruthKeys = storeTruthKeys
         self.workingpoint = workingpoint
-        
-        #DONE - but also available in files
-        wpValues = {
-            '2016preVFP': [0.0614, 0.3093, 0.7221], #https://twiki.cern.ch/twiki/bin/viewauth/CMS/BtagRecommendation2016Legacy
-            '2016': [0.0480, 0.2489, 0.6377], #https://twiki.cern.ch/twiki/bin/viewauth/CMS/BtagRecommendation106XUL16postVFP
-            '2017': [0.0532, 0.3040, 0.7476], #https://twiki.cern.ch/twiki/bin/view/CMS/BtagRecommendation106XUL17
-            '2018': [0.0490, 0.2783, 0.7100] #https://twiki.cern.ch/twiki/bin/view/CMS/BtagRecommendation106XUL18
-        }
-        
-        if workingpoint==BTagSelection.TIGHT:
-            self.taggerFct = lambda jet: jet.btagDeepFlavB>wpValues[Module.globalOptions['year']][2]
-        elif workingpoint==BTagSelection.MEDIUM:
-            self.taggerFct = lambda jet: jet.btagDeepFlavB>wpValues[Module.globalOptions['year']][1]
-        elif workingpoint==BTagSelection.LOOSE:
-            self.taggerFct = lambda jet: jet.btagDeepFlavB>wpValues[Module.globalOptions['year']][0]
-        else:
-            raise Exception("Btagging workingpoint not defined")
             
     def beginJob(self):
         pass
@@ -64,11 +49,10 @@ class BTagSelection(Module):
     def beginFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
         self.out = wrappedOutputTree
         
-        self.out.branch("n"+self.outputName, "I")
-        for variable in self.storeKinematics:
-            self.out.branch(self.outputName+"_"+variable, "F", lenVar="n"+self.outputName)
-        for variable in self.storeTruthKeys:
-            self.out.branch(self.outputName+"_"+variable, "F", lenVar="n"+self.outputName)
+        for outputName in self.outputName_list:
+            self.out.branch("n"+outputName, "I")
+            for variable in self.storeKinematics:
+                self.out.branch(outputName+"_"+variable, "F", lenVar="n"+outputName)
 
     def endFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
         pass
@@ -77,9 +61,8 @@ class BTagSelection(Module):
         """process event, return True (go to next module) or False (fail, go to next event)"""
 
         jets = self.inputCollection(event)
-
-
-        bJets = []
+        
+        bJets = OrderedDict([('tight',[]), ('medium',[]), ('loose',[])])
         lJets = []
 
 
@@ -91,30 +74,36 @@ class BTagSelection(Module):
             if math.fabs(jet.eta) > self.jetMaxEta:
                 lJets.append(jet)
                 continue
-
-            if not self.taggerFct(jet):
-                lJets.append(jet)
-                continue
-               
-            bJets.append(jet)
+                
+            if jet.btagDeepFlavB>self.btaggingWP[2]:
+                bJets['tight'].append(jet)
+                setattr(jet,"is_tightBTagged",True)
             
-        for jet in bJets:
-            setattr(jet,self.flagName,True)
-        for jet in lJets:
-            setattr(jet,self.flagName,False)
+            if jet.btagDeepFlavB>self.btaggingWP[1]:
+                bJets['medium'].append(jet)
+                setattr(jet,"is_mediumBTagged",True)
+                
+            if jet.btagDeepFlavB>self.btaggingWP[0]:
+                bJets['loose'].append(jet)
+                setattr(jet,"is_looseBTagged",True)
+               
+            # bJets.append(jet)
+            
+        #for jet in bJets:
+        #    setattr(jet,self.flagName,True)
+        #for jet in lJets:
+        #    setattr(jet,self.flagName,False)
+        
+        for outputName, bJet_type in zip(self.outputName_list, ['tight', 'medium', 'loose']):
+        
+            self.out.fillBranch("n"+outputName, len(bJets[bJet_type]))
 
+            for variable in self.storeKinematics:
+                self.out.fillBranch(outputName+"_"+variable, map(lambda jet: getattr(jet, variable), bJets[bJet_type]))
+
+                setattr(event, outputName, bJets[bJet_type])
+        
         self.out.fillBranch("n"+self.outputName, len(bJets))
-        for variable in self.storeKinematics:
-            self.out.fillBranch(self.outputName+"_"+variable,
-                                map(lambda jet: getattr(jet, variable), bJets))
-
-        for variable in self.storeTruthKeys:
-            self.out.fillBranch(self.outputName+"_"+variable,
-                                map(lambda jet: getattr(jet, variable), bJets))
-
-
-        setattr(event, self.outputName, bJets)
-        setattr(event, self.outputName+"_unselected", lJets)
 
         return True
 

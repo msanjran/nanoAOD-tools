@@ -63,6 +63,13 @@ isPowhegTTbar = 'TTTo' in args.inputFiles[0] and isPowheg
 minMuonPt =     {'2016': 25., '2016preVFP': 25., '2017': 28., '2018': 25.}
 minElectronPt = {'2016': 29., '2016preVFP': 29., '2017': 34., '2018': 34.}
 
+#b-tagging working point
+b_tagging_wpValues = {
+    '2016preVFP': [0.0614, 0.3093, 0.7221], # https://twiki.cern.ch/twiki/bin/viewauth/CMS/BtagRecommendation2016Legacy
+    '2016': [0.0480, 0.2489, 0.6377], # https://twiki.cern.ch/twiki/bin/viewauth/CMS/BtagRecommendation106XUL16postVFP
+    '2017': [0.0532, 0.3040, 0.7476], # https://twiki.cern.ch/twiki/bin/view/CMS/BtagRecommendation106XUL17
+    '2018': [0.0490, 0.2783, 0.7100] # https://twiki.cern.ch/twiki/bin/view/CMS/BtagRecommendation106XUL18
+}
 
 jesUncertaintyFilesRegrouped = {
     '2016':       "${CMSSW_BASE}/src/PhysicsTools/NanoAODTools/data/jme/RegroupedV2_Summer19UL16_V7_MC_UncertaintySources_AK4PFchs.txt",
@@ -108,48 +115,49 @@ def leptonSequence():
     seq = [
         MuonSelection(
             inputCollection=lambda event: Collection(event, "Muon"),
-            outputName="tightMuons",
-            storeKinematics=["pt", "eta", "phi"],
-            storeWeights=True,
-            muonMinPt=minMuonPt[args.year],
-            muonMaxEta=2.4,
+            outputName_list=["tightMuons", "mediumMuons", "looseMuons"]
+            storeKinematics=["pt", "eta", "phi", "mass", "charge", "miniPFRelIso_all"],
+            #muonMinPt=minMuonPt[args.year],
+            muonMinPt=15., # GeV
+            muonMaxEta=2.5, # not sure if still the case?
             triggerMatch=True,
             muonID=MuonSelection.TIGHT,
             muonIso=MuonSelection.INV if args.invid else MuonSelection.VERYTIGHT,
         ),
-        SingleMuonTriggerSelection(
-            inputCollection=lambda event: event.tightMuons,
-            outputName="IsoMuTrigger",
-            storeWeights=True,
-        ),
+#        SingleMuonTriggerSelection(
+#            inputCollection=lambda event: event.tightMuons,
+#            outputName="IsoMuTrigger",
+#            storeWeights=True,
+#        ),
         
-        MuonVeto(
-            inputCollection=lambda event: event.tightMuons_unselected,
-            outputName = "looseMuons",
-            muonMinPt = 10.,
-            muonMaxEta = 2.4,
-        ),
+#        MuonVeto(
+#            inputCollection=lambda event: event.tightMuons_unselected,
+#            outputName = "looseMuons",
+#            muonMinPt = 10.,
+#            muonMaxEta = 2.4,
+#        ),
 
         ElectronSelection(
             inputCollection = lambda event: Collection(event, "Electron"),
             outputName = "tightElectrons",
             electronID = ElectronSelection.INV if args.invid else ElectronSelection.WP90,
-            electronMinPt = minElectronPt[args.year],
-            electronMaxEta = 2.4,
-            storeKinematics=["pt", "eta", "phi"],
+            #electronMinPt = minElectronPt[args.year],
+            electronMinPt=15., # GeV
+            electronMaxEta = 2.5, # not sure if still the case?
+            storeKinematics=["pt", "eta", "phi", "mass", "charge", "miniPFRelIso_all"],
             storeWeights=True,
         ),
-        SingleElectronTriggerSelection(
-            inputCollection=lambda event: event.tightElectrons,
-            outputName="IsoElectronTrigger",
-            storeWeights=True,
-        ),
-        ElectronVeto(
-            inputCollection=lambda event: event.tightElectrons_unselected,
-            outputName = "looseElectrons",
-            electronMinPt = 10.,
-            electronMaxEta = 2.4,
-        ),
+#        SingleElectronTriggerSelection(
+#            inputCollection=lambda event: event.tightElectrons,
+#            outputName="IsoElectronTrigger",
+#            storeWeights=True,
+#        ),
+#        ElectronVeto(
+#            inputCollection=lambda event: event.tightElectrons_unselected,
+#            outputName = "looseElectrons",
+#            electronMinPt = 10.,
+#            electronMaxEta = 2.4,
+#        ),
         # EventSkim(selection=lambda event: (event.IsoMuTrigger_flag == 0) and (event.IsoElectronTrigger_flag == 0)),
         # EventSkim(selection=lambda event: (len(event.tightMuons) + len(event.tightElectrons)) == 0),
         # EventSkim(selection=lambda event: (len(event.looseMuons) + len(event.looseElectrons)) == 0), 
@@ -172,24 +180,25 @@ def jetSelection(jetDict):
         seq.extend([
             JetSelection(
                 inputCollection=jetCollection,
-                leptonCollectionDRCleaning=lambda event: event.tightMuons+event.tightElectrons,
-                jetMinPt=30.,
+                #leptonCollectionDRCleaning=lambda event: event.tightMuons+event.tightElectrons,
+                jetMinPt=35.,
                 jetMaxEta=2.4, # 2.4. is max range of tracker
                 dRCleaning=0.4,
                 jetId=JetSelection.TIGHT,
                 storeKinematics=jetkinematics,
-                outputName="selectedJets_"+systName,
+                outputName_list=["selectedJets_"+systName, "unselectedJets_"+systName]
             )
         ])
 
         seq.append(
             BTagSelection(
+                b_tagging_wpValues[args.year],
                 inputCollection=lambda event,sys=systName: getattr(event,"selectedJets_"+sys),
                 flagName="isBTagged",
-                outputName="selectedBJets_"+systName,
-                jetMinPt=30.,
+                outputName_list=["selectedBJets_"+systName+"_tight","selectedBJets_"+systName+"_medium","selectedBJets_"+systName+"_loose"],
+                jetMinPt=35.,
                 jetMaxEta=2.4,
-                workingpoint = BTagSelection.TIGHT,
+                workingpoint = [],
                 storeKinematics=jetkinematics,
                 storeTruthKeys = [],
             )
