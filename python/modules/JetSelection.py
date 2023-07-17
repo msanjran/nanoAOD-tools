@@ -22,7 +22,7 @@ class JetSelection(Module):
          self,
          inputCollection=lambda event: Collection(event, "Jet"),
          leptonCollectionDRCleaning=lambda event: [],
-         outputName="selectedJets",
+         outputName=["selectedJets", "unselectedJets"]
          jetMinPt=30.,
          jetMaxEta=4.8,
          dRCleaning=0.4,
@@ -104,14 +104,14 @@ class JetSelection(Module):
             
 
         self.out.fillBranch("n"+self.outputName, len(selectedJets))
-        for variable in self.storeKinematics:
-            self.out.fillBranch(
-                self.outputName+"_"+variable,
-                map(lambda jet: getattr(jet, variable), selectedJets)
-            )
-
-        setattr(event, self.outputName, selectedJets)
-        setattr(event, self.outputName+"_unselected", unselectedJets)
+        
+        for outputName, jet_list in zip(self.outputName_list, [selectedJets, unselectedJets]):
+            self.out.fillBranch("n"+outputName, len(jet_list))
+            
+            for variable in self.storeKinematics:
+                self.out.fillBranch(outputName+"_"+variable, map(lambda jet: getattr(jet, variable), jet_list))
+                
+            setattr(event, outputName, jet_list)
 
         return True
 
