@@ -236,7 +236,7 @@ def jetSelection(jetDict):
 
 
 analyzerChain = [
-    EventSkim(selection=lambda event: event.nTrigObj > 0),
+    # EventSkim(selection=lambda event: event.nTrigObj > 0),
     MetFilter(
         outputName="MET_filter"
     ),

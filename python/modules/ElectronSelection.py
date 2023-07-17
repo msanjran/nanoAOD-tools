@@ -10,6 +10,7 @@ from PhysicsTools.NanoAODTools.postprocessing.framework.datamodel import Collect
 from PhysicsTools.NanoAODTools.postprocessing.framework.eventloop import Module
 
 from utils import getHist, getSFXY, deltaR
+from collections import OrderedDict
 
 class ElectronSelection(Module):
     WP80 = 1
@@ -20,8 +21,9 @@ class ElectronSelection(Module):
     def __init__(
         self,
         inputCollection = lambda event: Collection(event, "Electron"),
-        outputName = "tightElectrons",
+        # outputName = "tightElectrons",
         triggerMatch=False,
+        iso_type=[],
         electronID = WP80,
         electronMinPt = 29.,
         electronMaxEta = 2.4,
@@ -30,7 +32,8 @@ class ElectronSelection(Module):
     ):
 
         self.inputCollection = inputCollection
-        self.outputName = outputName
+        # self.outputName = outputName
+        self.iso_type = []
         self.electronMinPt = electronMinPt
         self.electronMaxEta = electronMaxEta
         self.storeKinematics = storeKinematics
@@ -38,21 +41,12 @@ class ElectronSelection(Module):
         self.triggerMatch = triggerMatch
         
         self.triggerObjectCollection = lambda event: Collection(event, "TrigObj") if triggerMatch else lambda event: []
-
-        if electronID == ElectronSelection.WP90:
-            self.electronID = lambda electron: electron.mvaFall17V2Iso_WP90==1
-        elif electronID == ElectronSelection.WP80:
-            self.electronID = lambda electron: electron.mvaFall17V2Iso_WP80==1
-        elif electronID == ElectronSelection.INV: 
-            self.electronID = lambda electron: electron.mvaFall17V2Iso_WP80==0
-        elif electronID == ElectronSelection.NONE:
-            self.storeWeights = False
-            self.electronID = lambda electron: True
-        else:
-            raise Exception("Electron ID undefined")
-
-        #TODO: save the reco/ID weights if storeWeights==True
         
+        self.outputName_dict = OrderedDict()
+        for iso in iso_type:
+            self.outputName_dict[id] = OrderedDict()
+            for wp in ['tight', 'medium', 'loose']:
+                self.outputName_dict[id][wp] = wp+'_'+iso+'_'+'Electrons'
 
     def triggerMatched(self, electron, trigger_object):
         if self.triggerMatch:
@@ -66,7 +60,7 @@ class ElectronSelection(Module):
             else:
                 return False
         else:
-            return True  
+            return True
 
     def beginJob(self):
         pass
@@ -76,18 +70,16 @@ class ElectronSelection(Module):
 
     def beginFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
         self.out = wrappedOutputTree
-        self.out.branch("n"+self.outputName, "I")
-        if not Module.globalOptions["isData"] and self.storeWeights:
-            self.out.branch(self.outputName+"_weight_reco_nominal","F")
-            self.out.branch(self.outputName+"_weight_reco_up","F")
-            self.out.branch(self.outputName+"_weight_reco_down","F")
-
-            self.out.branch(self.outputName+"_weight_id_nominal","F")
-            self.out.branch(self.outputName+"_weight_id_up","F")
-            self.out.branch(self.outputName+"_weight_id_down","F")
-
-        for variable in self.storeKinematics:
-            self.out.branch(self.outputName+"_"+variable,"F",lenVar="n"+self.outputName)
+        # self.out.branch("n"+self.outputName, "I")
+        for wp in ['tight','medium','loose']:
+            self.out.branch("electron_MVA_Iso_"+wp+"ID", "F", lenVar="nElectron")
+            self.out.branch("electron_MVA_noIso_"+wp+"ID", "F", lenVar="nElectron")
+        
+        for iso_type in self.iso_type:
+            for wp in self.outputName_dict[id_type].keys():
+                self.out.branch("n"+self.outputName_dict[iso_type][wp], "I")
+                for variable in self.storeKinematics:
+                    self.out.branch(self.outputName_dict[id_type][wp]+"_"+variable,"F",lenVar="n"+self.outputName_dict[id_type][wp])
 
 
     def endFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
@@ -99,66 +91,92 @@ class ElectronSelection(Module):
         muons = Collection(event, "Muon")
         triggerObjects = self.triggerObjectCollection(event)
 
-        selectedElectrons = []
-        unselectedElectrons = []
+        selectedElectrons = OrderedDict([("Iso", OrderedDict([("tight", []), ("medium",[]), ("loose",[])])), ("noIso", OrderedDict([("tight", []), ("medium",[]), ("loose",[])])) ])
+        unselectedElectrons = OrderedDict([("Iso", []), ("noIso", []) ])
         
-        weight_reco_nominal = 1.
-        weight_reco_up = 1.
-        weight_reco_down = 1.
-
-        weight_id_nominal = 1.
-        weight_id_up = 1.
-        weight_id_down = 1.
+        electronIsoId = {'tight': [], 'medium': [], 'loose': []}
+        electronNoIsoId = {'tight': [], 'medium': [], 'loose': []}
 
         for electron in electrons:
             # https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedElectronIdentificationRun2
             if electron.pt>self.electronMinPt \
             and math.fabs(electron.eta)<self.electronMaxEta \
-            and self.electronID(electron)\
             and self.triggerMatched(electron, triggerObjects):
 
                 dxy = math.fabs(electron.dxy)
                 dz = math.fabs(electron.dz)
                 
                 if math.fabs(electron.eta) < 1.479 and (dxy>0.05 or dz>0.10):
-                    unselectedElectrons.append(electron)
+                    # unselectedElectrons.append(electron)
                     continue
                 elif dxy>0.10 or dz>0.20:
-                    unselectedElectrons.append(electron)
+                    # unselectedElectrons.append(electron)
                     continue
 
                 #reject electron if close-by muon
                 if len(muons)>0:
                     mindr = min(map(lambda muon: deltaR(muon, electron), muons))
                     if mindr < 0.05:
-                        unselectedElectrons.append(electron)
+                        # unselectedElectrons.append(electron)
                         continue
+                        
+                # save mvaFall17V2Iso and mvaFall17V2noIso
+                nElectron += 1
+                electronIsoId['tight'].append(electron.mvaFall17V2Iso_WP80)
+                electronIsoId['medium'].append(electron.mvaFall17V2Iso_WP90)
+                electronIsoId['loose'].append(electron.mvaFall17V2Iso_WPL)
+                electronNoIsoId['tight'].append(electron.mvaFall17V2noIso_WP80)
+                electronNoIsoId['medium'].append(electron.mvaFall17V2noIso_WP90)
+                electronNoIsoId['loose'].append(electron.mvaFall17V2noIso_WPL)
 
-                selectedElectrons.append(electron)
+                # selectedElectrons.append(electron)
                 
-                #TODO: electron reco/ID SFs
-                
-                
+                for iso_type in self.iso_type:
+                    if iso_type=='Iso':
+                        if electron.mvaFall17V2Iso_WP80==1:
+                            selectedElectrons[id_type]['tight'].append(electron)
+                            selectedElectrons[id_type]['medium'].append(electron)
+                            selectedElectrons[id_type]['loose'].append(electron)
+                        elif electron.mvaFall17V2Iso_WP90==1:
+                            selectedElectrons[id_type]['medium'].append(electron)
+                            selectedElectrons[id_type]['loose'].append(electron)
+                        elif electron.mvaFall17V2Iso_WPL==1:
+                            selectedElectrons[id_type]['loose'].append(electron)
+                        else:
+                            unselectedElectrons[id_type].append(electron)
+                    elif id_type=='noIso':
+                        if electron.mvaFall17V2noIso_WP80==1:
+                            selectedElectrons[id_type]['tight'].append(electron)
+                            selectedElectrons[id_type]['medium'].append(electron)
+                            selectedElectrons[id_type]['loose'].append(electron)
+                        elif electron.mvaFall17V2noIso_WP90==1:
+                            selectedElectrons[id_type]['medium'].append(electron)
+                            selectedElectrons[id_type]['loose'].append(electron)
+                        elif electron.mvaFall17V2noIso_WPL==1:
+                            selectedElectrons[id_type]['loose'].append(electron)
+                        else:
+                            unselectedElectrons[id_type].append(electron)
+
             else:
-                unselectedElectrons.append(electron)
+                continue
 
-        
-        if not Module.globalOptions["isData"] and self.storeWeights:
+            self.out.branch("electron_MVA_Iso_"+wp+"ID", "F", lenVar="nElectron")
+            self.out.branch("electron_MVA_noIso_"+wp+"ID", "F", lenVar="nElectron")
             
-            self.out.fillBranch(self.outputName+"_weight_reco_nominal", weight_reco_nominal)
-            self.out.fillBranch(self.outputName+"_weight_reco_up", weight_reco_up)
-            self.out.fillBranch(self.outputName+"_weight_reco_down", weight_reco_down)
-
-            self.out.fillBranch(self.outputName+"_weight_id_nominal",weight_id_nominal)
-            self.out.fillBranch(self.outputName+"_weight_id_up",weight_id_up)
-            self.out.fillBranch(self.outputName+"_weight_id_down",weight_id_down)
-
-        self.out.fillBranch("n"+self.outputName,len(selectedElectrons))
-
-        for variable in self.storeKinematics:
-            self.out.fillBranch(self.outputName+"_"+variable,map(lambda electron: getattr(electron,variable), selectedElectrons))
-
-        setattr(event,self.outputName,selectedElectrons)
-        setattr(event,self.outputName+"_unselected",unselectedElectrons)
-
+            
+        self.out.fillBranch("nElectron",nElectron)
+        for wp in ['tight', 'medium', 'loose']:
+            self.out.fillBranch("electron_MVA_Iso_"+wp+"ID", map(lambda id: id, electronIsoId[wp]))
+            self.out.fillBranch("electron_MVA_noIso_"+wp+"ID", map(lambda id: id, electronNoIsoId[wp]))
+            
+        for iso_type in self.iso_type:
+            for wp in self.outputName_dict[id_type].keys():
+                self.out.fillBranch("n"+self.outputName_dict[id_type][wp], len(selectedElectrons[id_type][wp]))
+                
+                for variable in self.storeKinematics:
+                    self.out.fillBranch(self.outputName_dict[id_type][wp]+"_"+variable,map(lambda electron: getattr(electron,variable),selectedElectrons[id_type][wp]))
+                    
+                setattr(event,self.outputName_dict[id_type][wp],selectedElectrons[id_type][wp])
+            setattr(event,"unselectedElectrons",unselectedElectrons[id_type])
+        
         return True

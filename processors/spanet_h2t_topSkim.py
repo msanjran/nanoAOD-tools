@@ -24,6 +24,7 @@ parser.add_argument('--nosys', dest='nosys',
                     action='store_true', default=False)
 parser.add_argument('--invid', dest='invid',
                     action='store_true', default=False)
+parser.add_argument('--skim_tops', dest='skim_tops', choices=['all', 'H2t', 'notH2t'], default='all')
 parser.add_argument('--year', dest='year',
                     action='store', type=str, default='2017', choices=['2016','2016preVFP','2017','2018'])
 parser.add_argument('-i','--input', dest='inputFiles', action='append', default=[])
@@ -38,6 +39,7 @@ print "isData:",args.isData
 print "isSignal:",args.isSignal
 print "evaluate systematics:",not args.nosys
 print "invert lepton id/iso:",args.invid
+print "skim tops", args.skim_tops
 print "inputs:",len(args.inputFiles)
 print "year:", args.year
 print "output directory:", args.output[0]
@@ -234,23 +236,34 @@ def jetSelection(jetDict):
 
 
 analyzerChain = [
-    EventSkim(selection=lambda event: event.nTrigObj > 0),
-    MetFilter(
-        outputName="MET_filter"
-    ),
+   # EventSkim(selection=lambda event: event.nTrigObj > 0),
+   MetFilter(
+       outputName="MET_filter"
+   ),
 ]
+
+def topCountSequence():
+    seq = [ GenTopFinder( inputCollection = lambda event: Collection(event, "GenPart"), outputName="selectedGenTops") ]
+    
+    if args.skim_tops == 'H2t':
+        seq.append(EventSkim(selection=lambda event: getattr(event, "selectedGenTops_nHadronicTops") == 2))
+    elif args.skim_tops == 'notH2t':
+        seq.append(EventSkim(selection=lambda event: getattr(event, "selectedGenTops_nHadronicTops") != 2))
+    
+    return seq
 
 def genPartSequence():
     seq = [
-            GenPartSelection_h2t(
+            GenPartSelection_h2t_v2(
                 inputCollection = lambda event: Collection(event, "GenPart"),
                 outputName="selectedGenParts",
-                storeKinematics=['phi', 'eta', 'pdgId'],
+                storeKinematics=['phi', 'eta', 'pt', 'pdgId'],
             )
         ]
         
     return seq
 
+analyzerChain.extend(topCountSequence()) # save events with all-hadronic
 analyzerChain.extend(leptonSequence())
 analyzerChain.extend(genPartSequence())
 

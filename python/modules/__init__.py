@@ -50,3 +50,4 @@ from GenParticleModuleGabriele import GenParticleModule
 from GenPartSelection_h4t_v2 import GenPartSelection_h4t_v2
 from GenParticleModuleGabriele_v2 import GenParticleModule_v2
 from GenTopFinder import GenTopFinder
+from GenPartSelection_h2t_v2 import GenPartSelection_h2t_v2

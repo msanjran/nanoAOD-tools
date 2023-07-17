@@ -160,12 +160,14 @@ def findLastCopy(p, pdg, depth, genParticles):
             if len(daughter_max[0]) == 1:
                 daughter_finalCopy = daughter_finalCopy_idx[int( daughter_max[0] )]
                 daughter_depth = daughter_finalCopy_depth[int( daughter_max[0] )]
+                daughter_isLastCopy_flag = True
                 return genParticles[daughter_finalCopy], daughter_depth, daughter_isLastCopy_flag
 
             # if more than one, ffs, choose first one
             else:
                 daughter_finalCopy = daughter_finalCopy_idx[int( daughter_max[0][0] )]
                 daughter_depth = daughter_finalCopy_depth[int( daughter_max[0][0] )]
+                daughter_isLastCopy_flag = True
                 return genParticles[daughter_finalCopy], daughter_depth, daughter_isLastCopy_flag
                 
             # can't really have len(0) here ...
